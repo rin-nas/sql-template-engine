@@ -29,7 +29,7 @@
 или значение ключа равно `static::BIND_SKIP`, то такой блок будет удалён со всеми вложенными блоками
 Пример SQL запроса:
       
-```
+```sql
 SELECT *,
        {EXISTS(SELECT r.col FROM r WHERE r.id = t.id AND r.exists_id = :exists_id) AS exists}
   FROM t
