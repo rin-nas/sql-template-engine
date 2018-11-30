@@ -10,7 +10,7 @@
 
 Шаблонизатор написан на языке PHP. В нём всего 1 публичный метод:
 
-```
+```php
 /**
  * Шаблонизатор SQL
  * Документация: https://github.com/rin-nas/sql-template-engine/edit/master/README.md
