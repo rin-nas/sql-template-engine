@@ -5,10 +5,8 @@ namespace Cms\Db\Query;
 
 class SqlExpression
 {
-    /**
-     * Используется в методе bind() для игнорирования именованных меток-заменителей в SQL шаблонизаторе
-     */
-    const BIND_SKIP = INF; //хотел использовать NAN, но с ним почему-то не работает, а с INF заработало /Ринат/
+    const BIND_SKIP = -INF;  //спец. значение метки-заменителя для удаления условного блока
+    const BIND_KEEP = +INF;  //спец. значение метки-заменителя для сохранения условного блока
 
     const CAST_TOKEN = '::';
     const CAST_REPLACEMENT = "\x01^^\x02";
@@ -62,18 +60,18 @@ class SqlExpression
      * Шаблонизатор SQL
      * Документация: https://github.com/rin-nas/sql-template-engine/edit/master/README.md
      *
-     * @param string                    $sql    Шаблон SQL запроса необязательными с метками-заменителями и условными блоками
-     * @param array                     $values Ассоциативный массив, где ключи — это метки-заменители,
-     *                                          а значения, это данные (любые типы), которые нужно заквотировать
-     * @param \Cms\Db\Adapter\Quotation $quotation  Объект, отвечающий за квотирование
+     * @param string $sql            Шаблон SQL запроса с необязательными метками-заменителями и условными блоками
+     * @param array  $placeholders   Ассоциативный массив, где ключи — это метки-заменители,
+     *                               а значения, это данные (любые типы), которые нужно заквотировать
+     * @param object $quotation      Объект, отвечающий за квотирование. Должен иметь методы quote() и quoteField()
      *
-     * @return \Cms\Db\Query\SqlExpression   Объект, в котором хранится готовое sql выражение
-     *                                       Объект имеет метод __toString(), возвращающий готовое sql выражение
-     *                                       Объект позволяет вставлять готовые куски SQL друг в друга без повторного квотирования
+     * @return SqlExpression   Объект, в котором хранится готовое sql выражение
+     *                         Объект имеет метод __toString(), возвращающий готовое sql выражение
+     *                         Объект позволяет вставлять готовые куски SQL друг в друга без повторного квотирования
      * @throws \Exception
      * @link   http://php.net/manual/en/pdo.prepare.php
      */
-    public static function bind(string $sql, array $values, \Cms\Db\Adapter\Quotation $quotation) : SqlExpression
+    public static function bind(string $sql, array $placeholders, $quotation) : SqlExpression
     {
         $hasBlocks = is_int($offset = strpos($sql, static::BLOCK_OPEN_TAG))
                   && is_int(strpos($sql, static::BLOCK_CLOSE_TAG, $offset));
@@ -82,13 +80,13 @@ class SqlExpression
         $castTokenReplacedCount = 0;
         $sql = str_replace(static::CAST_TOKEN, static::CAST_REPLACEMENT, $sql, $castTokenReplacedCount);
 
-        $values = static::quote($values, $quotation);
+        $placeholders = static::quote($placeholders, $quotation);
 
         //квотированные данные могут содержать спецсимволы, которые не являются частью настоящих меток-заменителей и парных блоков
         //закодируем эти спецсимволы, чтобы корректно работали замены настоящих меток-заменителей и парсинг парных блоков
-        $values = array_map(function($value){return strtr($value, static::ENCODE_QUOTED);}, $values);
+        $placeholders = array_map(function($value){return strtr($value, static::ENCODE_QUOTED);}, $placeholders);
 
-        $sql = strtr($sql, $values);
+        $sql = strtr($sql, $placeholders);
 
         if ($hasBlocks) {
             $tokens = static::tokenize($sql, static::BLOCK_OPEN_TAG, static::BLOCK_CLOSE_TAG);
@@ -114,16 +112,16 @@ class SqlExpression
     }
 
     /**
-     * Квотирует элементы переданного массива
+     * Квотирует элементы меток-заменителей
      *
-     * @param array                     $values
-     * @param \Cms\Db\Adapter\Quotation $quotation
+     * @param array  $placeholders
+     * @param object $quotation
      *
-     * @return array                    Возвращает ассоциативный массив, где каждый элемент является строкой с квотированными данными
+     * @return array  Возвращает ассоциативный массив, где каждый элемент является строкой с квотированными данными
      * @throws \Exception
      */
-    protected static function quote(array &$values, \Cms\Db\Adapter\Quotation $quotation) : array {
-        foreach ($values as $name => &$value) {
+    protected static function quote(array &$placeholders, $quotation) : array {
+        foreach ($placeholders as $name => &$value) {
             if (! is_string($name)) {
                 throw new \Exception('Ключи массива являются именованными метками-заменителями и они должны быть строками');
             }
@@ -133,35 +131,48 @@ class SqlExpression
                 }
 
                 if ($value === static::BIND_SKIP) {
-                    unset($values[$name]);
+                    unset($placeholders[$name]);
+                    continue;
+                }
+                if ($value === static::BIND_KEEP) {
+                    $value = '';
                     continue;
                 }
 
-                $isArray = substr($name, -2, 2) === '[]';
-
-                if ($name{0} === static::VALUE_PREFIX) {
-                    if ($isArray && is_array($value)) {
-                        foreach ($value as $k => $v) $value[$k] = $quotation->quote($v);
-                        $value = implode(', ', $value);
-                        continue;
-                    }
-                    $value = $quotation->quote($value);
-                    continue;
-
-                }
-                if ($name{0} === static::FIELD_PREFIX) {
-                    if ($isArray && is_array($value)) {
-                        foreach ($value as $k => $v) $value[$k] = $quotation->quoteField($v);
-                        $value = implode(', ', $value);
-                        continue;
-                    }
-                    $value = $quotation->quoteField($value);
+                if (in_array($name{0}, [static::VALUE_PREFIX, static::FIELD_PREFIX], true)) {
+                    $isArray = substr($name, -2, 2) === '[]';
+                    $value = static::quoteValue($value, $isArray, $name{0}, $quotation);
                     continue;
                 }
             }
             throw new \Exception("Формат метки-заменителя '$name' не поддерживается");
         }
-        return $values;
+        return $placeholders;
+    }
+
+    /**
+     * @param string|integer|float|bool|null|array|SqlExpression|\DateTime  $value
+     * @param bool   $isArray
+     * @param string $prefix
+     * @param object $quotation
+     *
+     * @return string
+     */
+    protected static function quoteValue($value, bool $isArray, string $prefix, $quotation) : string {
+        if ($isArray && is_array($value)) {
+            foreach ($value as $k => $v) {
+                if ($v instanceof SqlExpression) {
+                    $value[$k] = $v->__toString();
+                    continue;
+                }
+                $value[$k] = ($prefix === static::FIELD_PREFIX) ? $quotation->quoteField($v) : $quotation->quote($v);
+            }
+            return implode(', ', $value);
+        }
+        if ($value instanceof SqlExpression) {
+            return $value->__toString();
+        }
+        return ($prefix === static::FIELD_PREFIX) ? $quotation->quoteField($value) : $quotation->quote($value);
     }
 
     /**
