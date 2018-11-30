@@ -6,6 +6,29 @@
 
 Он работает очень быстро, т.к. [регулярные выражения](https://ru.wikipedia.org/wiki/%D0%A0%D0%B5%D0%B3%D1%83%D0%BB%D1%8F%D1%80%D0%BD%D1%8B%D0%B5_%D0%B2%D1%8B%D1%80%D0%B0%D0%B6%D0%B5%D0%BD%D0%B8%D1%8F) для синтаксического анализа (парсинга) SQL почти не используются.
 
+## Реализация
+
+Шаблонизатор написан на языке PHP. В нём всего 1 публичный метод:
+
+```
+/**
+ * Шаблонизатор SQL
+ * Документация: https://github.com/rin-nas/sql-template-engine/edit/master/README.md
+ *
+ * @param string $sql            Шаблон SQL запроса с необязательными метками-заменителями и условными блоками
+ * @param array  $placeholders   Ассоциативный массив, где ключи — это метки-заменители,
+ *                               а значения, это данные (любые типы), которые нужно заквотировать
+ * @param object $quotation      Объект, отвечающий за квотирование. Должен иметь методы quote() и quoteField()
+ *
+ * @return SqlExpression   Объект, в котором хранится готовое sql выражение
+ *                         Объект имеет метод __toString(), возвращающий готовое sql выражение
+ *                         Объект позволяет вставлять готовые куски SQL друг в друга без повторного квотирования
+ * @throws \Exception
+ * @link   http://php.net/manual/en/pdo.prepare.php
+ */
+public static function bind(string $sql, array $placeholders, $quotation) : SqlExpression
+```
+
 ## Замена именованных меток-заменителей
 
 1. **`:value`**
