@@ -14,25 +14,28 @@ class SqlExpression
     const BLOCK_OPEN_TAG  = '{';
     const BLOCK_CLOSE_TAG = '}';
 
-    const VALUE_PREFIX = ':';
+    const VALUE_INDEXED_PREFIX = '?';
+    const VALUE_NAMED_PREFIX = ':';
     const FIELD_PREFIX = '@';
 
     const ENCODE_QUOTED = [
-        "\x01" => "\x011\x02", //binary safe!
-        "\x02" => "\x012\x02", //binary safe!
-        ':'    => "\x013\x02",
-        '@'    => "\x014\x02",
-        '{'    => "\x015\x02",
-        '}'    => "\x016\x02",
+        //"\x01" => "\x011\x02", //binary safe!
+        //"\x02" => "\x012\x02", //binary safe!
+        '?'    => "\x013\x02",
+        ':'    => "\x014\x02",
+        '@'    => "\x015\x02",
+        '{'    => "\x016\x02",
+        '}'    => "\x017\x02",
     ];
 
     const DECODE_QUOTED = [
-        "\x011\x02" => "\x01",
-        "\x012\x02" => "\x02",
-        "\x013\x02" => ':',
-        "\x014\x02" => '@',
-        "\x015\x02" => '{',
-        "\x016\x02" => '}',
+        //"\x011\x02" => "\x01",
+        //"\x012\x02" => "\x02",
+        "\x013\x02" => '?',
+        "\x014\x02" => ':',
+        "\x015\x02" => '@',
+        "\x016\x02" => '{',
+        "\x017\x02" => '}',
     ];
 
     /**
@@ -60,10 +63,11 @@ class SqlExpression
      * Шаблонизатор SQL
      * Документация: https://github.com/rin-nas/sql-template-engine/edit/master/README.md
      *
-     * @param string $sql            Шаблон SQL запроса с необязательными метками-заменителями и условными блоками
-     * @param array  $placeholders   Ассоциативный массив, где ключи — это метки-заменители,
-     *                               а значения, это данные (любые типы), которые нужно заквотировать
-     * @param object $quotation      Объект, отвечающий за квотирование. Должен иметь методы quote() и quoteField()
+     * @param string $sql          Шаблон SQL запроса с необязательными метками-заменителями и условными блоками
+     * @param array $placeholders  Ассоциативный массив, где
+     *                                 ключи — это метки-заменители
+     *                                 значения — это данные (любые типы), которые нужно заквотировать
+     * @param object $quotation    Объект, отвечающий за квотирование. Должен иметь методы quote() и quoteField()
      *
      * @return SqlExpression   Объект, в котором хранится готовое sql выражение
      *                         Объект имеет метод __toString(), возвращающий готовое sql выражение
@@ -112,6 +116,38 @@ class SqlExpression
     }
 
     /**
+     * Делает bind() для каждого элемента переданного массива
+     *
+     * @param string $sql        Шаблон SQL запроса с метками-заменителями
+     * @param array  $values     Ассоциативный массив
+     *                           Для строковых ключей массива в SQL шаблоне зарезервирована метка-заменитель @key
+     *                           Для значений массива в SQL шаблоне зарезервированы метки-заменители:
+     *                           :key, :row, :row[], :value, :value[], @value и для строковых ключей ещё @key
+     * @param object $quotation  Объект, отвечающий за квотирование. Должен иметь методы quote() и quoteField()
+     *
+     * @return SqlExpression[]
+     * @throws \Exception
+     */
+    public static function bindEach(string $sql, array $values, $quotation) : array
+    {
+        foreach ($values as $key => $value) {
+            $placeholders = [
+                ':key'     => $key,
+                ':row'     => $value, //alias to :value
+                ':row[]'   => $value, //alias to :value[]
+                ':value'   => $value,
+                ':value[]' => $value,
+                '@value'   => $value,
+            ];
+            if (is_string($key)) {
+                $placeholders['@key'] = $key;
+            }
+            $values[$key] = static::bind($sql, $placeholders, $quotation);
+        }
+        return $values;
+    }
+
+    /**
      * Квотирует элементы меток-заменителей
      *
      * @param array  $placeholders
@@ -120,12 +156,14 @@ class SqlExpression
      * @return array  Возвращает ассоциативный массив, где каждый элемент является строкой с квотированными данными
      * @throws \Exception
      */
-    protected static function quote(array &$placeholders, $quotation) : array {
+    protected static function quote(array $placeholders, $quotation) : array {
         foreach ($placeholders as $name => &$value) {
-            if (! is_string($name)) {
-                throw new \Exception('Ключи массива являются именованными метками-заменителями и они должны быть строками');
+            if (is_int($name) && $name >= 0) {
+                unset($placeholders[$name]);
+                $name = static::VALUE_INDEXED_PREFIX . $name;
+                $placeholders[$name] = $value;
             }
-            if (strlen($name) > 1) {
+            if (is_string($name) && strlen($name) > 1) {
                 if (strpos($name, static::CAST_TOKEN) !== false) {
                     throw new \Exception("Метка-заменитель '$name' не должна содержать подстроку '".static::CAST_TOKEN."'");
                 }
@@ -139,13 +177,15 @@ class SqlExpression
                     continue;
                 }
 
-                if (in_array($name{0}, [static::VALUE_PREFIX, static::FIELD_PREFIX], true)) {
+                if (in_array($name{0}, [static::VALUE_NAMED_PREFIX, static::VALUE_INDEXED_PREFIX, static::FIELD_PREFIX], true)) {
                     $isArray = substr($name, -2, 2) === '[]';
                     $value = static::quoteValue($value, $isArray, $name{0}, $quotation);
                     continue;
                 }
             }
-            throw new \Exception("Формат метки-заменителя '$name' не поддерживается");
+            throw new \Exception('Ключи массива являются именованными или позиционными метками-заменителями. ' .
+                                         'Ключи массива должны быть строками или целыми числами >= 0. ' .
+                                         "Формат метки-заменителя '$name' не поддерживается.");
         }
         return $placeholders;
     }
@@ -257,14 +297,14 @@ class SqlExpression
      */
     protected static function getFirstPlaceholder(string $sql) : ?string {
         //speed improves by strpos()
-        foreach ([static::VALUE_PREFIX, static::FIELD_PREFIX] as $char) {
+        foreach ([static::VALUE_NAMED_PREFIX, static::VALUE_INDEXED_PREFIX, static::FIELD_PREFIX] as $char) {
             $offset = strpos($sql, $char);
             if ($offset !== false) break;
         }
         if (! is_int($offset)) return null;
 
         $matches = [];
-        preg_match('~[:@] [a-zA-Z_]+ [a-zA-Z_\d]* (?:\[\])? ~sxSX', $sql, $matches, null, $offset);
+        preg_match('~[:?@] [a-zA-Z_]+ [a-zA-Z_\d]* (?:\[\])? ~sxSX', $sql, $matches, null, $offset);
         if (count($matches) > 0) {
             return $matches[0];
         }
