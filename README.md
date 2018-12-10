@@ -51,7 +51,7 @@ public static function bind(string $sql, array $placeholders, $quotation) : SqlE
     Удобно использовать следующих конструкциях, примеры:
     `INSERT INTO t (@fields[]) ...`, `COALESCE(@fields[])`, `ROW(@fields[])`, `ARRAY[@fields[]]`
     
-Синтаксис меток-заменителей в терминах регулярных выражений [PCRE](http://pcre.org/): `~[:@] [a-zA-Z_]+ [a-zA-Z_\d]* (?:\[\])? ~sxSX`
+Синтаксис меток-заменителей в терминах регулярных выражений [PCRE](http://pcre.org/): `~[:@?] [a-zA-Z_]+ [a-zA-Z_\d]* (?:\[\])? ~sxSX`
 
 ## Обработка условных блоков
 
