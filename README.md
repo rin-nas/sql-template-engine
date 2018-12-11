@@ -1,6 +1,6 @@
 # SQL template engine (шаблонизатор)
 
-**SQL шаблонизатор** — это инструмент, облегчающий конструирование [SQL](https://ru.wikipedia.org/wiki/SQL) запросов. В SQL шаблон вместо меток-заменителей (плейсхолдеров) подставляются настоящие данные (строки, числа, булевы, null, массивы, объекты). Важно, что при подстановке данных в шаблон они квотируются, чтобы недопустить [SQL инъекций](https://ru.wikipedia.org/wiki/%D0%92%D0%BD%D0%B5%D0%B4%D1%80%D0%B5%D0%BD%D0%B8%D0%B5_SQL-%D0%BA%D0%BE%D0%B4%D0%B0). Далее готовый SQL запрос уже можно выполнить в СУБД (PostgreSQL, MySQL, ClickHouse).
+**SQL шаблонизатор** — это инструмент, облегчающий конструирование [SQL](https://ru.wikipedia.org/wiki/SQL) запросов. В SQL шаблон вместо меток-заменителей (placeholders) подставляются настоящие данные (строки, числа, булевы, null, массивы, объекты). Важно, что при подстановке данных в шаблон они квотируются, чтобы недопустить [SQL инъекций](https://ru.wikipedia.org/wiki/%D0%92%D0%BD%D0%B5%D0%B4%D1%80%D0%B5%D0%BD%D0%B8%D0%B5_SQL-%D0%BA%D0%BE%D0%B4%D0%B0). Далее готовый SQL запрос уже можно выполнить в СУБД (PostgreSQL, MySQL, ClickHouse).
 
 Этот SQL шаблонизатор может применяться вместо [ORM](https://ru.wikipedia.org/wiki/ORM) и [Query Builder](https://www.doctrine-project.org/projects/doctrine-orm/en/2.6/reference/query-builder.html). См. [таблицу сравнения](https://github.com/rin-nas/articles/blob/master/sql_template_engine_vs_orm_or_qb.md).
 
@@ -48,13 +48,13 @@ public static function bindEach(string $sql, array $values, $quotation) : array
 
 ## Замена именованных меток-заменителей
 
-Синтаксис меток-заменителей в терминах регулярных выражений [PCRE](http://pcre.org/): `~(?: [:@] [a-zA-Z_]+ [a-zA-Z_\d]* | \?\d+ ) (?:\[\])? ~sx`
+Синтаксис меток-заменителей в терминах регулярных выражений [PCRE](http://pcre.org/): `~(?: [:@] [a-zA-Z_]+ [a-zA-Z_\d]* | [?@] \d+ ) (?:\[\])? ~sx`
 
-1. **`:value`**
+1. **`:value`** или **`:N`**, где `value` — это произвольное название, а `N` — целое число, указывающее на индекс массива меток-заменителей
     Квотирует значение, массив возвращается в синтаксисе `{…}`.
     Возможные типы значений: `string`, `integer`, `float`, `boolean`, `null`, `array`, `SqlExpression`, `\DateTime`.
     
-1. **`@field`**
+1. **`@field`** или **`@N`**, где `field` — это произвольное название, а `N` — целое число, указывающее на индекс массива меток-заменителей
     Квотирует идентификатор поля.
     Возможные типы значений: `string`, `array`, `SqlExpression`.
     
