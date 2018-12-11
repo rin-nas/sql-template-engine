@@ -8,7 +8,7 @@
 
 ## Реализация
 
-Шаблонизатор представляет собой один PHP файл [`SqlTemplate.php`](https://github.com/rin-nas/sql-template-engine/blob/master/SqlExpression.php), в котором всего 1 публичный метод:
+Шаблонизатор представляет собой один PHP файл [`SqlTemplate.php`](https://github.com/rin-nas/sql-template-engine/blob/master/SqlExpression.php), в котором всего 2 публичных метода.
 
 ```php
 /**
@@ -29,10 +29,29 @@
 public static function bind(string $sql, array $placeholders, $quotation) : SqlExpression
 ```
 
+```php
+/**
+     * Делает bind() для каждого элемента переданного массива
+     *
+     * @param string $sql        Шаблон SQL запроса с метками-заменителями
+     * @param array  $values     Ассоциативный массив
+     *                           Для строковых ключей массива в SQL шаблоне зарезервирована метка-заменитель @key
+     *                           Для значений массива в SQL шаблоне зарезервированы метки-заменители:
+     *                           :key, :row, :row[], :value, :value[], @value и для строковых ключей ещё @key
+     * @param object $quotation  Объект, отвечающий за квотирование. Должен иметь методы quote() и quoteField()
+     *
+     * @return SqlExpression[]
+     * @throws \Exception
+     */
+    public static function bindEach(string $sql, array $values, $quotation) : array
+```
+
 ## Замена именованных меток-заменителей
 
+Синтаксис меток-заменителей в терминах регулярных выражений [PCRE](http://pcre.org/): `~(?: [:@] [a-zA-Z_]+ [a-zA-Z_\d]* | \?\d+ ) (?:\[\])? ~sx`
+
 1. **`:value`**
-    Квотирует значение, массив возвращается в синтаксисе `{...}`.
+    Квотирует значение, массив возвращается в синтаксисе `{…}`.
     Возможные типы значений: `string`, `integer`, `float`, `boolean`, `null`, `array`, `SqlExpression`, `\DateTime`.
     
 1. **`@field`**
@@ -49,13 +68,12 @@ public static function bind(string $sql, array $placeholders, $quotation) : SqlE
     На входе ожидает массив и квотирует каждый его элемент как идентификатор поля и склеивает их через запятую.
     Если передан НЕ массив, то работает аналогично метке-заменителю `@field`.
     Удобно использовать следующих конструкциях, примеры:
-    `INSERT INTO t (@fields[]) ...`, `COALESCE(@fields[])`, `ROW(@fields[])`, `ARRAY[@fields[]]`
+    `INSERT INTO t (@fields[]) …`, `COALESCE(@fields[])`, `ROW(@fields[])`, `ARRAY[@fields[]]`
     
-Синтаксис меток-заменителей в терминах регулярных выражений [PCRE](http://pcre.org/): `~[:@?] [a-zA-Z_]+ [a-zA-Z_\d]* (?:\[\])? ~sxSX`
 
 ## Обработка условных блоков
 
-Условный блок — это часть SQL запроса, с начальной и конечной фигурной скобкой: `{...}`
+Условный блок — это часть SQL запроса, с начальной и конечной фигурной скобкой: `{…}`
 * Если в блоке есть хотябы одна метка-заменитель, которой нет в ключах массива меток-заменителей
 или значение ключа равно `BIND_SKIP`, то такой блок будет удалён со всеми вложенными блоками.
 * Если значение ключа равно `BIND_KEEP`, то блок будет сохранён (вложенные блоки независимы), а сама метка-заменитель удаляется.
@@ -63,7 +81,7 @@ public static function bind(string $sql, array $placeholders, $quotation) : SqlE
       
 ```sql
 SELECT *
-       {,EXISTS(SELECT r.col FROM r WHERE r.id = t.id AND r.exists_id = :exists_id) AS exists}
+       {, EXISTS(SELECT r.col FROM r WHERE r.id = t.id AND r.exists_id = :exists_id) AS exists}
   FROM t
  WHERE TRUE
        {AND @col = :val}
@@ -72,7 +90,7 @@ SELECT *
 ```
 
 ## TODO
-* изменить синтаксис квотирования массивов с `{...}` на более гибкий `ARRAY[...]`
-* добавить позиционные метки-заменители через знак вопроса `?0`, `?1`, ...
+* изменить синтаксис квотирования массивов с `{…}` на более гибкий `ARRAY[…]`
+* добавить позиционные метки-заменители через знак вопроса `?0`, `?1`, …
 * добавить пример с подзапросом и именем поля "name::json", который декодирует JSON
 * добавить примеры вызова метода `bind()` с параметрами и результатом
