@@ -31,19 +31,19 @@ public static function bind(string $sql, array $placeholders, $quotation) : SqlE
 
 ```php
 /**
-     * Делает bind() для каждого элемента переданного массива
-     *
-     * @param string $sql        Шаблон SQL запроса с метками-заменителями
-     * @param array  $values     Ассоциативный массив
-     *                           Для строковых ключей массива в SQL шаблоне зарезервирована метка-заменитель @key
-     *                           Для значений массива в SQL шаблоне зарезервированы метки-заменители:
-     *                           :key, :row, :row[], :value, :value[], @value и для строковых ключей ещё @key
-     * @param object $quotation  Объект, отвечающий за квотирование. Должен иметь методы quote() и quoteField()
-     *
-     * @return SqlExpression[]
-     * @throws \Exception
-     */
-    public static function bindEach(string $sql, array $values, $quotation) : array
+ * Делает bind() для каждого элемента переданного массива
+ *
+ * @param string $sql        Шаблон SQL запроса с метками-заменителями
+ * @param array  $values     Ассоциативный массив
+ *                           Для строковых ключей массива в SQL шаблоне зарезервирована метка-заменитель @key
+ *                           Для значений массива в SQL шаблоне зарезервированы метки-заменители:
+ *                           :key, :row, :row[], :value, :value[], @value и для строковых ключей ещё @key
+ * @param object $quotation  Объект, отвечающий за квотирование. Должен иметь методы quote() и quoteField()
+ *
+ * @return SqlExpression[]
+ * @throws \Exception
+ */
+public static function bindEach(string $sql, array $values, $quotation) : array
 ```
 
 ## Замена именованных меток-заменителей
