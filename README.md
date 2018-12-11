@@ -62,8 +62,8 @@ public static function bind(string $sql, array $placeholders, $quotation) : SqlE
 Пример SQL запроса:
       
 ```sql
-SELECT *,
-       {EXISTS(SELECT r.col FROM r WHERE r.id = t.id AND r.exists_id = :exists_id) AS exists}
+SELECT *
+       {,EXISTS(SELECT r.col FROM r WHERE r.id = t.id AND r.exists_id = :exists_id) AS exists}
   FROM t
  WHERE TRUE
        {AND @col = :val}
