@@ -304,7 +304,10 @@ class SqlExpression
         if (! is_int($offset)) return null;
 
         $matches = [];
-        preg_match('~[:?@] [a-zA-Z_]+ [a-zA-Z_\d]* (?:\[\])? ~sxSX', $sql, $matches, null, $offset);
+        preg_match('~(?: [:@] [a-zA-Z_]+ [a-zA-Z_\d]* 
+                              | [?@] \d+ 
+                             ) (?:\[\])? 
+                           ~sxSX', $sql, $matches, null, $offset);
         if (count($matches) > 0) {
             return $matches[0];
         }
