@@ -89,6 +89,9 @@ SELECT *
 {LIMIT :limit {OFFSET :offset}}
 ```
 
+## Ссылки по теме
+* https://www.npmjs.com/package/sql-template-strings
+
 ## TODO
 * изменить синтаксис квотирования массивов с `{…}` на более гибкий `ARRAY[…]`
 * добавить пример с подзапросом и именем поля "name::json", который декодирует JSON
