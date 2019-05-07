@@ -86,7 +86,8 @@ SELECT *
  WHERE TRUE
        {AND @col = :val}
        {AND id IN (:ids[])}
-{LIMIT :limit {OFFSET :offset}}
+{LIMIT :limit}
+{OFFSET :offset}
 ```
 
 ## Ссылки по теме
