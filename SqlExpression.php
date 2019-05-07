@@ -14,8 +14,8 @@ class SqlExpression
     const BLOCK_OPEN_TAG  = '{';
     const BLOCK_CLOSE_TAG = '}';
 
-    const VALUE_INDEXED_PREFIX = '?';
-    const VALUE_NAMED_PREFIX = ':';
+    const IF_PREFIX    = '?';
+    const VALUE_PREFIX = ':';
     const FIELD_PREFIX = '@';
 
     const ENCODE_QUOTED = [
@@ -61,7 +61,7 @@ class SqlExpression
 
     /**
      * Шаблонизатор SQL
-     * Документация: https://github.com/rin-nas/sql-template-engine/edit/master/README.md
+     * Документация: https://github.com/rin-nas/sql-template-engine/
      *
      * @param string $sql          Шаблон SQL запроса с необязательными метками-заменителями и условными блоками
      * @param array $placeholders  Ассоциативный массив, где
@@ -156,14 +156,13 @@ class SqlExpression
      * @return array  Возвращает ассоциативный массив, где каждый элемент является строкой с квотированными данными
      * @throws \Exception
      */
-    protected static function quote(array $placeholders, $quotation) : array {
+    protected static function quote(array $placeholders, $quotation) : array
+    {
         foreach ($placeholders as $name => &$value) {
-            if (is_int($name) && $name >= 0) {
-                unset($placeholders[$name]);
-                $name = static::VALUE_INDEXED_PREFIX . $name;
-                $placeholders[$name] = $value;
+            if (! is_string($name)) {
+                throw new \Exception('Ключи массива являются именованными метками-заменителями и должны быть строками. ');
             }
-            if (is_string($name) && strlen($name) > 1) {
+            if (strlen($name) > 1) {
                 if (strpos($name, static::CAST_TOKEN) !== false) {
                     throw new \Exception("Метка-заменитель '$name' не должна содержать подстроку '".static::CAST_TOKEN."'");
                 }
@@ -177,15 +176,22 @@ class SqlExpression
                     continue;
                 }
 
-                if (in_array($name{0}, [static::VALUE_NAMED_PREFIX, static::VALUE_INDEXED_PREFIX, static::FIELD_PREFIX], true)) {
+                if ($name{0} === static::IF_PREFIX) {
+                    if ($value) {
+                        $value = '';
+                    } else {
+                        unset($placeholders[$name]);
+                    }
+                    continue;
+                }
+
+                if ($name{0} === static::VALUE_PREFIX || $name{0} === static::FIELD_PREFIX) {
                     $isArray = substr($name, -2, 2) === '[]';
                     $value = static::quoteValue($value, $isArray, $name{0}, $quotation);
                     continue;
                 }
             }
-            throw new \Exception('Ключи массива являются именованными или позиционными метками-заменителями. ' .
-                                         'Ключи массива должны быть строками или целыми числами >= 0. ' .
-                                         "Формат метки-заменителя '$name' не поддерживается.");
+            throw new \Exception("Формат метки-заменителя '$name' не поддерживается.");
         }
         return $placeholders;
     }
@@ -198,7 +204,8 @@ class SqlExpression
      *
      * @return string
      */
-    protected static function quoteValue($value, bool $isArray, string $prefix, $quotation) : string {
+    protected static function quoteValue($value, bool $isArray, string $prefix, $quotation) : string
+    {
         if ($isArray && is_array($value)) {
             foreach ($value as $k => $v) {
                 if ($v instanceof SqlExpression) {
@@ -254,7 +261,8 @@ class SqlExpression
      *
      * @return string
      */
-    protected static function unTokenize(array $tokens) : string {
+    protected static function unTokenize(array $tokens) : string
+    {
         $tokens = array_map(function($item){return $item[0];}, $tokens);
         return implode('', $tokens);
     }
@@ -274,7 +282,9 @@ class SqlExpression
             list ($str, $currentLevel) = $token;
             if ($removeLevel !== null && $removeLevel > $currentLevel) {
                 for ($i = count($return); $i > 0; $i--) {
-                    if ($return[$i - 1][1] < $removeLevel) break;
+                    if ($return[$i - 1][1] < $removeLevel) {
+                        break;
+                    }
                     unset($return[$i - 1]);
                 }
                 $removeLevel = null;
@@ -283,7 +293,9 @@ class SqlExpression
                 $removeLevel = $currentLevel;
                 continue;
             }
-            if ($removeLevel === null) $return[] = $token;
+            if ($removeLevel === null) {
+                $return[] = $token;
+            }
         }
         return $return;
     }
@@ -295,19 +307,21 @@ class SqlExpression
      *
      * @return null|string  Возвращает null, если ничего не найдено
      */
-    protected static function getFirstPlaceholder(string $sql) : ?string {
+    protected static function getFirstPlaceholder(string $sql) : ?string
+    {
         //speed improves by strpos()
-        foreach ([static::VALUE_NAMED_PREFIX, static::VALUE_INDEXED_PREFIX, static::FIELD_PREFIX] as $char) {
+        foreach ([static::VALUE_PREFIX, static::IF_PREFIX, static::FIELD_PREFIX] as $char) {
             $offset = strpos($sql, $char);
-            if ($offset !== false) break;
+            if ($offset !== false) {
+                break;
+            }
         }
-        if (! is_int($offset)) return null;
+        if (! is_int($offset)) {
+            return null;
+        }
 
         $matches = [];
-        preg_match('~(?: [:@] [a-zA-Z_]+ [a-zA-Z_\d]* 
-                              | [?@] \d+ 
-                             ) (?:\[\])? 
-                           ~sxSX', $sql, $matches, null, $offset);
+        preg_match('~ [:@?] [a-zA-Z_]+ [a-zA-Z_\d]* (?:\[\])? ~sxSX', $sql, $matches, null, $offset);
         if (count($matches) > 0) {
             return $matches[0];
         }
