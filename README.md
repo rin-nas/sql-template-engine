@@ -85,14 +85,20 @@ public static function bindEach(string $sql, array $values, $quotation) : array
 Пример SQL запроса:
       
 ```sql
-SELECT *
-       {, EXISTS(SELECT r.col FROM r WHERE r.id = t.id AND r.exists_id = :exists_id) AS exists}
+SELECT {?total COUNT(*)}
+       {?fields   
+           t.*
+           {, EXISTS(SELECT r.col FROM r WHERE r.id = t.id AND r.exists_id = :exists_id) AS exists}
+       }
   FROM t
  WHERE TRUE
        {AND @col = :val}
-       {AND id IN (:ids[])}
-{LIMIT :limit}
-{OFFSET :offset}
+       {AND t.id IN (:ids[])}
+{?fields
+    ORDER BY t.name
+    {LIMIT :limit}
+    {OFFSET :offset}
+}
 ```
 
 ## Ссылки по теме
