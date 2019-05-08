@@ -38,6 +38,8 @@ class SqlExpression
         "\x017\x02" => '}',
     ];
 
+    const PLACEHOLDER_PATTERN = '~ [?:@] [a-zA-Z_]++ [a-zA-Z_\d]*+ (?:\[\])? ~sxSX';
+
     /**
      * @var string
      */
@@ -80,7 +82,7 @@ class SqlExpression
         $hasBlocks = is_int($offset = strpos($sql, static::BLOCK_OPEN_TAG))
                   && is_int(strpos($sql, static::BLOCK_CLOSE_TAG, $offset));
 
-        //prevent PostgreSQL value cast like '... AS field::text'
+        //prevent PostgreSQL value cast like 'field::text'
         $castTokenReplacedCount = 0;
         $sql = str_replace(static::CAST_TOKEN, static::CAST_REPLACEMENT, $sql, $castTokenReplacedCount);
 
@@ -88,7 +90,9 @@ class SqlExpression
 
         //квотированные данные могут содержать спецсимволы, которые не являются частью настоящих меток-заменителей и парных блоков
         //закодируем эти спецсимволы, чтобы корректно работали замены настоящих меток-заменителей и парсинг парных блоков
-        $placeholders = array_map(function($value){return strtr($value, static::ENCODE_QUOTED);}, $placeholders);
+        foreach ($placeholders as $key => $value) {
+            $placeholders[$key] = strtr($value, static::ENCODE_QUOTED);
+        }
 
         $sql = strtr($sql, $placeholders);
 
@@ -225,27 +229,27 @@ class SqlExpression
     /**
      * Разбивает строку на части по парным тегам, учитывая вложенность
      *
-     * @param string $sql
+     * @param string $str
      * @param string $openTag
      * @param string $closeTag
      *
      * @return array        Возвращает массив, где каждый элемент -- это массив из части строки и уровня вложенности
      * @throws \Exception
      */
-    protected static function tokenize(string $sql, string $openTag, string $closeTag) : array
+    protected static function tokenize(string $str, string $openTag, string $closeTag) : array
     {
         if ($openTag === $closeTag) {
             throw new \Exception("Парные теги '$openTag' и '$closeTag' не должны быть одинаковыми");
         }
         $level = 0;
-        $tokens = array();
-        $opens = explode($openTag, $sql);
+        $tokens = [];
+        $opens = explode($openTag, $str);
         foreach ($opens as $open) {
             $closes = explode($closeTag, $open);
-            $tokens[] = array($closes[0], ++$level);
+            $tokens[] = [$closes[0], ++$level];
             unset($closes[0]);
             foreach ($closes as $close) {
-                $tokens[] = array($close, --$level);
+                $tokens[] = [$close, --$level];
             }
         }
         if ($level !== 1) {
@@ -257,29 +261,32 @@ class SqlExpression
     /**
      * Обратная функция по отношению к tokeinze()
      *
-     * @param array $tokens
+     * @param array &$tokens
      *
      * @return string
      */
-    protected static function unTokenize(array $tokens) : string
+    protected static function unTokenize(array &$tokens) : string
     {
-        $tokens = array_map(function($item){return $item[0];}, $tokens);
-        return implode('', $tokens);
+        $str = '';
+        foreach ($tokens as $token) {
+            $str .= $token[0];
+        }
+        return $str;
     }
 
     /**
      * Удаляет из массива элементы, в которых остались неиспользуемые метки-заменители
      *
-     * @param array $tokens
+     * @param array &$tokens
      *
      * @return array    Возвращает массив с той же структурой, что и массив на входе
      */
     protected static function removeUnused(array &$tokens) : array
     {
-        $return = array();
+        $return = [];
         $removeLevel = null;
         foreach ($tokens as $index => $token) {
-            list ($str, $currentLevel) = $token;
+            [$str, $currentLevel] = $token;
             if ($removeLevel !== null && $removeLevel > $currentLevel) {
                 for ($i = count($return); $i > 0; $i--) {
                     if ($return[$i - 1][1] < $removeLevel) {
@@ -303,27 +310,20 @@ class SqlExpression
     /**
      * Возвращает название первой найденной метки-заменителя в строке
      *
-     * @param string $sql
+     * @param string $str
      *
-     * @return null|string  Возвращает null, если ничего не найдено
+     * @return string|null  Возвращает null, если ничего не найдено
      */
-    protected static function getFirstPlaceholder(string $sql) : ?string
+    protected static function getFirstPlaceholder(string $str) : ?string
     {
-        //speed improves by strpos()
-        foreach ([static::VALUE_PREFIX, static::IF_PREFIX, static::FIELD_PREFIX] as $char) {
-            $offset = strpos($sql, $char);
-            if ($offset !== false) {
-                break;
-            }
-        }
-        if (! is_int($offset)) {
-            return null;
-        }
-
         $matches = [];
-        preg_match('~ [:@?] [a-zA-Z_]+ [a-zA-Z_\d]* (?:\[\])? ~sxSX', $sql, $matches, null, $offset);
-        if (count($matches) > 0) {
-            return $matches[0];
+        foreach ([static::IF_PREFIX, static::VALUE_PREFIX, static::FIELD_PREFIX] as $char) {
+            //speed improves by strpos()
+            $offset = strpos($str, $char);
+            if ($offset !== false
+                && preg_match(static::PLACEHOLDER_PATTERN, $str, $matches, null, $offset) === 1) {
+                return $matches[0];
+            }
         }
         return null;
     }
