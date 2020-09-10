@@ -126,7 +126,7 @@ class SqlExpression
      * @param array  $values     Ассоциативный массив
      *                           Для строковых ключей массива в SQL шаблоне зарезервирована метка-заменитель @key
      *                           Для значений массива в SQL шаблоне зарезервированы метки-заменители:
-     *                           :key, :row, :row[], :value, :value[], @value и для строковых ключей ещё @key
+     *                           :key, :row, :row[], :value, :value[] и для строковых ключей ещё @key
      * @param object $quotation  Объект, отвечающий за квотирование. Должен иметь методы quote() и quoteField()
      *
      * @return SqlExpression[]
@@ -141,7 +141,7 @@ class SqlExpression
                 ':row[]'   => $value, //alias to :value[]
                 ':value'   => $value,
                 ':value[]' => $value,
-                '@value'   => $value,
+                //'@value'   => $value, //DEPRECATED, bugly way
             ];
             if (is_string($key)) {
                 $placeholders['@key'] = $key;
