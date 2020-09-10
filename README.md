@@ -101,6 +101,49 @@ SELECT {?total COUNT(*)}
 }
 ```
 
+## Пример использования
+
+```php
+$data = [
+    [
+        'person_id' => null,
+        'created_at' => (new \DateTime()),
+        'recipient' => 'test1@mail.ru',
+        'scores' => 10,
+        'reason' => 'Невозможно доставить сообщение',
+    ],
+    [
+        'person_id' => 555,
+        'created_at' => '2020-09-10 10:30:00',
+        'recipient' => 'test2@mail.ru',
+        'scores' => 90,
+        'reason' => 'Невозможно доставить сообщение',
+    ],
+    //...
+];
+
+$sql = $this->db->bind(
+   'INSERT INTO @table (@fields[])
+    VALUES :rows[]
+    ON CONFLICT (lower(@recipient)) 
+    DO UPDATE SET 
+        @scores = LEAST(@table.@scores + EXCLUDED.@scores, :maxScores), 
+        @reason = EXCLUDED.@reason',
+    [
+        '@table' => self::_TABLE,
+        '@fields[]' => array_keys(reset($data)),
+        '@recipient' => self::RECIPIENT,
+        '@scores' => self::SCORES,
+        '@reason' => self::REASON,
+        ':rows[]' => $this->db->bindEach('(:row[])', $data),
+        ':maxScores' => 100,
+    ]
+);
+
+$this->db->query($sql);
+
+```
+
 ## Замечания по безопасности
 
 Не используйте метки-заменители и фигурные скобки `{` и `}` внутри комментариев `/*...*/` и `--...`! Шаблонизатор про комментарии ничего не знает.
