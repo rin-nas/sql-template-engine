@@ -248,9 +248,10 @@ WHERE true
     {?ids             AND r.id IN (:ids[])}
     {?not_ids         AND r.id NOT IN (:not_ids[])}
     {?big_cities_only AND r.is_big_city = true}
-    {?filter_paid_model AND } {?filter_pm_condition NOT } {?filter_paid_model 
+    {?filter_paid_model AND {?filter_pm_condition NOT }
       EXISTS(SELECT 1 FROM v3_city INNER JOIN v3_city_publisher cp ON v3_city.id = cp.city_id 
-        WHERE r.city_id=v3_city.id AND cp.link_type=:link_type_auto_bind)}
+        WHERE r.city_id=v3_city.id AND cp.link_type=:link_type_auto_bind)
+    }
     {?query
         AND length(rtrim(normalize.query)) > 0 -- для скорости
         AND lower(r.name) LIKE vars.query_like -- для скорости
