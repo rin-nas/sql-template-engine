@@ -233,13 +233,6 @@ SELECT
                             INNER JOIN v3_metro_branch AS mb ON mb.id = ms.metro_branch_id  
                             WHERE mb.region_id = r.id 
                             LIMIT 1) AS has_subway,}
-        /*
-        TRIM(CASE WHEN rt.is_region THEN r.name || ' ' || LOWER(rt.name)
-                 ELSE rt.abbreviation || ' ' || r.name
-                 -- ELSE r.name
-                END
-            ) AS full_name, 
-        */
         {:specify AS specify,}
         r.id
     }
