@@ -37,7 +37,7 @@ public static function bind(string $sql, array $placeholders, $quotation) : SqlE
  * @param array  $values     Ассоциативный массив
  *                           Для строковых ключей массива в SQL шаблоне зарезервирована метка-заменитель @key
  *                           Для значений массива в SQL шаблоне зарезервированы метки-заменители:
- *                           :key, :row, :row[], :value, :value[], @value
+ *                           :key, :row, :row[], :value, :value[]
  * @param object $quotation  Объект, отвечающий за квотирование. Должен иметь методы quote() и quoteField()
  *
  * @return SqlExpression[]
