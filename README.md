@@ -101,7 +101,7 @@ SELECT {?total COUNT(*)}
 }
 ```
 
-## Пример использования
+## Пример использования 1
 
 ```php
 $data = [
@@ -142,6 +142,163 @@ $sql = $this->db->bind(
 
 $this->db->query($sql);
 
+```
+
+## Пример использования 2
+
+```php
+/**
+ *
+ * @param mixed[] $filter
+ * @param array   $fields
+ * @param string  $sort
+ * @param int     $limit
+ * @param int     $offset
+ * @param bool    $isCountTotal
+ *
+ * @return array[]|int
+ * @throws \Rdw\X\Db\Exceptions\DbException
+ * @throws \Exception
+ */
+public function getByFilter(
+    array $filter = [],
+    array $fields = [],
+    string $sort = '',
+    int $limit = 20,
+    int $offset = 0,
+    bool $isCountTotal = false
+) {
+    if (count($fields) > 0) {
+        $this->selectAll = false;
+    }
+    $this->select = $fields;
+    $this->return = [];
+
+    //https://github.com/rin-nas/sql-template-engine/
+    $placeholders = [
+        '?total'           => $isCountTotal,
+        '?fields'          => ! $isCountTotal,
+        '?has_subway'      => $this->fieldSelected(static::FIELD_HAS_SUBWAY),
+        '?ids'             => count($filter['ids'] ?? []) > 0,
+        '?not_ids'         => count($filter['not_ids'] ?? []) > 0,
+        '?type_ids'        => count($filter['type_ids'] ?? []) > 0,
+        '?query'           => strlen($filter['query'] ?? '') > 0,
+        '?big_cities_only' => ($filter['big_cities_only'] ?? false),
+        '?sort_name'       => $sort === self::SORT_NAME,
+        '?sort_order_num'  => $sort === self::SORT_ORDER_NUMBER,
+        '?sort_query_rank' => $sort === self::SORT_QUERY_RANK,
+        '?country_ids'     => !empty($filter['country_ids'] ?? []),
+
+        ':specify'         => in_array(static::FIELD_SPECIFY, $fields)
+                                    ? $this->db->bind(self::getFieldSpecifySQL(), [])
+                                    : Database::BIND_SKIP,
+        ':ids[]'           => ($filter['ids']         ?? Database::BIND_SKIP),
+        ':not_ids[]'       => ($filter['not_ids']     ?? Database::BIND_SKIP),
+        ':type_ids[]'      => ($filter['type_ids']    ?? Database::BIND_SKIP),
+        ':query'           => ($filter['query']       ?? Database::BIND_SKIP),
+        ':country_ids[]'   => ($filter['country_ids'] ?? Database::BIND_SKIP),
+        ':limit'           => $limit,
+        ':offset'          => $offset,
+    ];
+
+    $field = static::FIELD_PAID_MODEL_AVAILABLE;
+    if (($filter[$field] ?? null) !== null) {
+        $placeholders['?filter_paid_model']   = true;
+        $placeholders['?filter_pm_condition'] = !$filter[$field];
+        $placeholders[':link_type_auto_bind'] = V3CityPublishers::LINK_TYPE_AUTO_BIND;
+    }
+
+    $sql = <<<'SQL'
+{?query 
+WITH
+    normalize AS (
+        SELECT ltrim(REGEXP_REPLACE(LOWER(:query::text), '[^а-яёa-z0-9]+', ' ', 'gi')) AS query
+    ),
+    vars AS (
+        SELECT CONCAT('%', REPLACE(quote_like(trim(normalize.query)), ' ', '_%'), '%') AS query_like,
+               CONCAT(
+                   '(?<![а-яёa-z0-9])', 
+                   REPLACE(quote_regexp(normalize.query), ' ', '(?:[^а-яёa-z0-9]+|$)')
+               ) AS query_regexp
+        FROM normalize
+    )
+}
+SELECT
+    {?total COUNT(*)}
+    {?fields
+        r.*,
+        COALESCE(r.is_big_city, false) as is_big_city,
+        {?has_subway EXISTS(SELECT 1 
+                            FROM v3_metro AS ms
+                            INNER JOIN v3_metro_branch AS mb ON mb.id = ms.metro_branch_id  
+                            WHERE mb.region_id = r.id 
+                            LIMIT 1) AS has_subway,}
+        /*
+        TRIM(CASE WHEN rt.is_region THEN r.name || ' ' || LOWER(rt.name)
+                 ELSE rt.abbreviation || ' ' || r.name
+                 -- ELSE r.name
+                END
+            ) AS full_name, 
+        */
+        {:specify AS specify,}
+        r.id
+    }
+FROM v3_region AS r
+INNER JOIN v3_region_type AS rt ON r.region_type_id = rt.id
+INNER JOIN v3_country AS c ON c.id = r.country_id
+{?query , vars, normalize}
+WHERE true
+    AND r.city_id IS NOT NULL
+    AND r.id != 1954 -- "Дальний Восток" исключается, т.к. для РФ это территория из нескольких субъектов федерации!
+    AND r.region_type_id != 12
+    {?type_ids        AND r.region_type_id IN (:type_ids[])}
+    {?ids             AND r.id IN (:ids[])}
+    {?not_ids         AND r.id NOT IN (:not_ids[])}
+    {?big_cities_only AND r.is_big_city = true}
+    {?filter_paid_model AND } {?filter_pm_condition NOT } {?filter_paid_model 
+      EXISTS(SELECT 1 FROM v3_city INNER JOIN v3_city_publisher cp ON v3_city.id = cp.city_id 
+        WHERE r.city_id=v3_city.id AND cp.link_type=:link_type_auto_bind)}
+    {?query
+        AND length(rtrim(normalize.query)) > 0 -- для скорости
+        AND lower(r.name) LIKE vars.query_like -- для скорости
+        AND lower(r.name) ~* vars.query_regexp -- для точности
+    }
+    {?country_ids AND r.country_id IN (:country_ids[])}
+{?fields
+    {?sort_name              ORDER BY r.name, r.order_num}
+    {?sort_order_num         ORDER BY r.order_num, NLEVEL(r.ltree_path), name}
+    {?sort_query_rank ?query ORDER BY lower(r.name) LIKE RTRIM(normalize.query), LENGTH(r.name), r.name}
+    LIMIT  :limit
+    OFFSET :offset
+}
+SQL;
+
+    $sql = $this->db->bind($sql, $placeholders);
+
+    if ($isCountTotal) {
+        return $this->db->fetchOne($sql);
+    }
+    $regions = $this->db->fetchAll($sql);
+
+    /** @var array $region */
+    foreach ($regions as $region) {
+        //$region = (object)$region; # чтобы не переписывать
+        $this->return[$region['id']] = [];
+        $this->setReturnId($region);
+        //$this->setReturnFullName($region);
+        $this->setReturnName($region);
+        $this->setReturnNameCaseLoct($region);
+        $this->setReturnNameCaseGent($region);
+        $this->setReturnDomain($region);
+        $this->setReturnLTree($region);
+        $this->setReturnTypeId($region);
+        $this->setReturnIsBigCity($region);
+        $this->setReturnHasSubway($region);
+        $this->setReturnGeoPoint($region);
+        $this->setReturnSpecify($region);
+    }
+    return $this->return;
+}
 ```
 
 ## Замечания по безопасности
