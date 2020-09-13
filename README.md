@@ -117,7 +117,7 @@ $data = [
         'created_at' => '2020-09-10 10:30:00',
         'recipient' => 'test2@mail.ru',
         'scores' => 90,
-        'reason' => 'Невозможно доставить сообщение',
+        'reason' => 'Email не существует',
     ],
     //...
 ];
@@ -142,6 +142,17 @@ $sql = $this->db->bind(
 
 $this->db->query($sql);
 
+```
+Результат в `$sql` (код отформатирован для удобства чтения):
+```sql
+INSERT INTO "user_email_blacklist" ("person_id", "created_at", "recipient", "scores", "reason")
+VALUES 
+    (NULL, '2020-09-13T11:08:40.597+03:00'::timestamptz, 'test1@mail.ru', 10, 'Невозможно доставить сообщение'), 
+    (555, '2020-09-10 10:30:00', 'test2@mail.ru', 90, 'Email не существует')
+ON CONFLICT (lower("recipient")) 
+DO UPDATE SET 
+    "scores" = LEAST("user_email_blacklist"."scores" + EXCLUDED."scores", 100), 
+    "reason" = EXCLUDED."reason"
 ```
 
 ## Пример использования 2
