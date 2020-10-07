@@ -2,7 +2,7 @@
 
 **SQL шаблонизатор** — это инструмент, облегчающий конструирование [SQL](https://ru.wikipedia.org/wiki/SQL) запросов. В SQL шаблон вместо меток-заменителей (placeholders) подставляются настоящие данные (строки, числа, булевы, null, массивы, объекты). Важно, что при подстановке данных в шаблон они квотируются, чтобы недопустить [SQL инъекций](https://ru.wikipedia.org/wiki/%D0%92%D0%BD%D0%B5%D0%B4%D1%80%D0%B5%D0%BD%D0%B8%D0%B5_SQL-%D0%BA%D0%BE%D0%B4%D0%B0). Далее готовый SQL запрос уже можно выполнить в СУБД (PostgreSQL, MySQL, ClickHouse).
 
-Этот SQL шаблонизатор может применяться вместо [ORM](https://ru.wikipedia.org/wiki/ORM) и [Query Builder](https://www.doctrine-project.org/projects/doctrine-orm/en/2.6/reference/query-builder.html). См. [таблицу сравнения](/sql_template_engine_vs_orm_or_qb.md).
+Этот SQL шаблонизатор может применяться вместо [ORM](https://ru.wikipedia.org/wiki/ORM) и [Query Builder](https://www.doctrine-project.org/projects/doctrine-orm/en/2.6/reference/query-builder.html). См. [таблицу сравнения](/sql_template_engine_vs_orm_vs_qb.md).
 
 Он работает очень быстро, т.к. [регулярные выражения](https://ru.wikipedia.org/wiki/%D0%A0%D0%B5%D0%B3%D1%83%D0%BB%D1%8F%D1%80%D0%BD%D1%8B%D0%B5_%D0%B2%D1%8B%D1%80%D0%B0%D0%B6%D0%B5%D0%BD%D0%B8%D1%8F) для синтаксического анализа (парсинга) SQL почти не используются.
 
