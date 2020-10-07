@@ -5,7 +5,7 @@
 Принцип [KISS](https://ru.wikipedia.org/wiki/KISS_(%D0%BF%D1%80%D0%B8%D0%BD%D1%86%D0%B8%D0%BF)) утверждает, что большинство систем работают лучше всего, если они остаются [простыми](https://yandex.ru/yandsearch?text=%D0%AD%D0%B4%D1%81%D0%B3%D0%B5%D1%80%20%D0%94%D0%B5%D0%B9%D0%BA%D1%81%D1%82%D1%80%D0%B0%3A%20%D0%9F%D1%80%D0%BE%D1%81%D1%82%D0%BE%D1%82%D0%B0%20%E2%80%94%20%D1%8D%D1%82%D0%BE%20%D0%BD%D0%B5%D0%BF%D1%80%D0%B5%D0%BC%D0%B5%D0%BD%D0%BD%D0%BE%D0%B5%20%D1%83%D1%81%D0%BB%D0%BE%D0%B2%D0%B8%D0%B5%20%D0%B4%D0%BB%D1%8F%20%D0%BE%D0%B1%D0%B5%D1%81%D0%BF%D0%B5%D1%87%D0%B5%D0%BD%D0%B8%D1%8F%20%D0%BD%D0%B0%D0%B4%D0%B5%D0%B6%D0%BD%D0%BE%D1%81%D1%82%D0%B8&lr=10740), а не усложняются. В области проектирования IT решений простота должна быть одной из ключевых целей, и следует избегать ненужной сложности.
 
 * Описание принципов работы [SQL шаблонизатора](/README.md)
-* По [ORM](https://ru.wikipedia.org/wiki/ORM) ознакомьтесь [с этой статьёй на Хабре](https://m.habr.com/company/pgdayrussia/blog/328690/).
+* По [ORM](https://ru.wikipedia.org/wiki/ORM) ознакомьтесь [с этой статьёй на Хабре](https://m.habr.com/company/pgdayrussia/blog/328690/). [Сравнение скорости популярных ORM для PHP](https://github.com/c9s/forked-php-orm-benchmark).
 * По QueryBuilder ознакомьтесь с разделом документации [Laravel](http://laravel.su/docs/5.5/queries) и/или [Doctrine](https://www.doctrine-project.org/projects/doctrine-orm/en/2.6/reference/query-builder.html).
 
 ## Сокращения
