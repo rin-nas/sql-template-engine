@@ -188,7 +188,6 @@ public function getByFilter(
     $this->select = $fields;
     $this->return = [];
 
-    //https://github.com/rin-nas/sql-template-engine/
     $placeholders = [
         '?total'           => $isCountTotal,
         '?fields'          => ! $isCountTotal,
@@ -286,26 +285,7 @@ SQL;
     if ($isCountTotal) {
         return $this->db->fetchOne($sql);
     }
-    $regions = $this->db->fetchAll($sql);
-
-    /** @var array $region */
-    foreach ($regions as $region) {
-        //$region = (object)$region; # чтобы не переписывать
-        $this->return[$region['id']] = [];
-        $this->setReturnId($region);
-        //$this->setReturnFullName($region);
-        $this->setReturnName($region);
-        $this->setReturnNameCaseLoct($region);
-        $this->setReturnNameCaseGent($region);
-        $this->setReturnDomain($region);
-        $this->setReturnLTree($region);
-        $this->setReturnTypeId($region);
-        $this->setReturnIsBigCity($region);
-        $this->setReturnHasSubway($region);
-        $this->setReturnGeoPoint($region);
-        $this->setReturnSpecify($region);
-    }
-    return $this->return;
+    return $this->db->fetchAll($sql);
 }
 ```
 
