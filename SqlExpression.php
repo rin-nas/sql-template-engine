@@ -1,7 +1,8 @@
 <?php
 
-namespace Cms\Db\Query;
+namespace Rdw\X\Db\Query;
 
+use Exception;
 
 class SqlExpression
 {
@@ -69,7 +70,9 @@ class SqlExpression
      * @param array $placeholders  Ассоциативный массив, где
      *                                 ключи — это метки-заменители
      *                                 значения — это данные (любые типы), которые нужно заквотировать
-     * @param object $quotation    Объект, отвечающий за квотирование. Должен иметь методы quote() и quoteField()
+     * @param object $quotation    Объект, отвечающий за квотирование. Должен иметь методы:
+     *                             * quote() -- для квотирования данных
+     *                             * quoteField() -- для квотирования идентификатора объекта БД (название таблицы, колонки, процедуры и т.п.)
      *
      * @return SqlExpression   Объект, в котором хранится готовое sql выражение
      *                         Объект имеет метод __toString(), возвращающий готовое sql выражение
