@@ -1,0 +1,28 @@
+{
+    "name": "rinnas/sql-template-engine",
+    "config": {
+        "secure-http": false
+    },
+    "description": "SQL Template Engine",
+    "keywords": [
+        "sql", "quotation", "database", "DB", "SQL query"
+    ],
+    "authors": [
+        {
+            "name": "rin-nas"
+        }
+    ],
+    "license": "MIT",
+    "require": {
+        "php": ">=7.1.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "7.5.*"
+    },
+    "autoload": {
+        "psr-4": {
+            "rinnas\\SqlTemplateEngine\\": "src/",
+            "rinnas\\SqlTemplateEngine\\Quotation\\": "src/Quotation"
+        }
+    }
+}

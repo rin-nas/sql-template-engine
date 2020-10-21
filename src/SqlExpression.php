@@ -1,8 +1,8 @@
 <?php
 
-namespace Rdw\X\Db\Query;
+namespace rinnas\SqlTemplateEngine;
 
-use Exception;
+use rinnas\SqlTemplateEngine\Quotation\IQuotation;
 
 class SqlExpression
 {
@@ -66,11 +66,11 @@ class SqlExpression
      * Шаблонизатор SQL
      * Документация: https://github.com/rin-nas/sql-template-engine/
      *
-     * @param string $sql          Шаблон SQL запроса с необязательными метками-заменителями и условными блоками
-     * @param array $placeholders  Ассоциативный массив, где
+     * @param string     $sql          Шаблон SQL запроса с необязательными метками-заменителями и условными блоками
+     * @param array      $placeholders Ассоциативный массив, где
      *                                 ключи — это метки-заменители
      *                                 значения — это данные (любые типы), которые нужно заквотировать
-     * @param object $quotation    Объект, отвечающий за квотирование. Должен иметь методы:
+     * @param IQuotation $quotation    Объект, отвечающий за квотирование:
      *                             * quote() -- для квотирования данных
      *                             * quoteField() -- для квотирования идентификатора объекта БД (название таблицы, колонки, процедуры и т.п.)
      *
@@ -80,7 +80,7 @@ class SqlExpression
      * @throws \Exception
      * @link   http://php.net/manual/en/pdo.prepare.php
      */
-    public static function bind(string $sql, array $placeholders, $quotation) : SqlExpression
+    public static function bind(string $sql, array $placeholders, IQuotation $quotation) : SqlExpression
     {
         $hasBlocks = is_int($offset = strpos($sql, static::BLOCK_OPEN_TAG))
                   && is_int(strpos($sql, static::BLOCK_CLOSE_TAG, $offset));
@@ -125,17 +125,17 @@ class SqlExpression
     /**
      * Делает bind() для каждого элемента переданного массива
      *
-     * @param string $sql        Шаблон SQL запроса с метками-заменителями
-     * @param array  $values     Ассоциативный массив
+     * @param string     $sql       Шаблон SQL запроса с метками-заменителями
+     * @param array      $values    Ассоциативный массив
      *                           Для строковых ключей массива в SQL шаблоне зарезервирована метка-заменитель @key
      *                           Для значений массива в SQL шаблоне зарезервированы метки-заменители:
      *                           :key, :row, :row[], :value, :value[] и для строковых ключей ещё @key
-     * @param object $quotation  Объект, отвечающий за квотирование. Должен иметь методы quote() и quoteField()
+     * @param IQuotation $quotation Объект, отвечающий за квотирование. Должен иметь методы quote() и quoteField()
      *
      * @return SqlExpression[]
      * @throws \Exception
      */
-    public static function bindEach(string $sql, array $values, $quotation) : array
+    public static function bindEach(string $sql, array $values, IQuotation $quotation) : array
     {
         foreach ($values as $key => $value) {
             $placeholders = [
@@ -157,13 +157,13 @@ class SqlExpression
     /**
      * Квотирует элементы меток-заменителей
      *
-     * @param array  $placeholders
-     * @param object $quotation
+     * @param array      $placeholders
+     * @param IQuotation $quotation
      *
      * @return array  Возвращает ассоциативный массив, где каждый элемент является строкой с квотированными данными
      * @throws \Exception
      */
-    protected static function quote(array $placeholders, $quotation) : array
+    protected static function quote(array $placeholders, IQuotation $quotation) : array
     {
         foreach ($placeholders as $name => &$value) {
             if (! is_string($name)) {
@@ -204,14 +204,14 @@ class SqlExpression
     }
 
     /**
-     * @param string|integer|float|bool|null|array|SqlExpression|\DateTime  $value
-     * @param bool   $isArray
-     * @param string $prefix
-     * @param object $quotation
+     * @param string|integer|float|bool|null|array|SqlExpression|\DateTime $value
+     * @param bool                                                         $isArray
+     * @param string                                                       $prefix
+     * @param IQuotation                                                   $quotation
      *
      * @return string
      */
-    protected static function quoteValue($value, bool $isArray, string $prefix, $quotation) : string
+    protected static function quoteValue($value, bool $isArray, string $prefix, IQuotation $quotation) : string
     {
         if ($isArray && is_array($value)) {
             foreach ($value as $k => $v) {
