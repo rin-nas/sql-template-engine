@@ -307,6 +307,3 @@ SELECT /* @col1, */ col2 FROM t
 ```sql
 SELECT /* " */ ", */ col2 FROM t
 ```
-
-## Ссылки по теме
-* https://www.npmjs.com/package/sql-template-strings
