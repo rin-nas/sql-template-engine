@@ -10,7 +10,7 @@
 
 ## Реализация
 
-Шаблонизатор представляет собой один PHP файл [`SqlTemplate.php`](https://github.com/rin-nas/sql-template-engine/blob/master/SqlExpression.php), в котором всего 2 публичных метода.
+Шаблонизатор представляет собой один PHP файл [`SqlTemplate.php`](https://github.com/rin-nas/sql-template-engine/blob/master/src/SqlExpression.php), в котором всего 2 публичных метода.
 
 ```php
 /**
