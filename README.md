@@ -307,3 +307,7 @@ SELECT /* @col1, */ col2 FROM t
 ```sql
 SELECT /* " */ ", */ col2 FROM t
 ```
+
+## История возникновения
+
+Некоторые идеи были взяты из библиотеки [DbSimple](https://github.com/dimikot/DbSimple). [Описание](https://web.archive.org/web/20120522094756/http://www.dklab.ru/lib/DbSimple/) идей на русском языке.
